@@ -3,8 +3,10 @@
 //  
 // Author:
 //       Carlos Alberto Cortez <calberto.cortez@gmail.com>
+//       Luís Reis <luiscubal@gmail.com>
 // 
 // Copyright (c) 2011 Carlos Alberto Cortez
+// Copyright (c) 2012 Luís Reis
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,31 +39,40 @@ namespace Xwt.WPFBackend
 {
 	public class WindowBackend : WindowFrameBackend, IWindowBackend
 	{
-		DockPanel rootPanel;
-		System.Windows.Controls.Menu mainMenu;
+		Grid rootPanel;
+		internal System.Windows.Controls.Menu mainMenu;
 		MenuBackend mainMenuBackend;
 
 		public WindowBackend ()
 		{
 			Window = new System.Windows.Window ();
-			rootPanel = new DockPanel ();
+			rootPanel = new Grid ();
 
 			Window.Content = rootPanel;
+
+            var menuRow = new RowDefinition();
+            menuRow.Height = GridLength.Auto;
+            rootPanel.RowDefinitions.Add(menuRow);
+            rootPanel.RowDefinitions.Add(new RowDefinition());
 		}
 
 		public void SetChild (IWidgetBackend child)
 		{
-			Window.Content = ((IWpfWidgetBackend)child).Widget;
+            FrameworkElement widget = ((IWpfWidgetBackend)child).Widget;
+			rootPanel.Children.Add(widget);
+            Grid.SetRow(widget, 1);
 		}
 
 		public void SetMainMenu (IMenuBackend menu)
 		{
+            if (mainMenu != null) {
+                mainMenuBackend.ParentWindow = null;
+                rootPanel.Children.Remove(mainMenu);
+            }
+
 			if (menu == null) {
-				if (mainMenu != null) {
-					rootPanel.Children.Remove (mainMenu);
-					mainMenu = null;
-					mainMenuBackend = null;
-				}
+                mainMenu = null;
+                mainMenuBackend = null;
 				return;
 			}
 
@@ -73,8 +84,11 @@ namespace Xwt.WPFBackend
 
 			rootPanel.Children.Add (m);
 
+            Grid.SetRow(m, 0);
+
 			mainMenu = m;
 			mainMenuBackend = menuBackend;
+            mainMenuBackend.ParentWindow = this;
 		}
 
 		public void SetPadding (double left, double top, double right, double bottom)
