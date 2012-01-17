@@ -61,6 +61,12 @@
     <Compile Include="Samples\TextEntries.cs" />
     <Compile Include="Samples\Images.cs" />
     <Compile Include="Samples\CanvasWithWidget.cs" />
+    <Compile Include="Samples\Tables.cs" />
+    <Compile Include="Samples\Labels.cs" />
+    <Compile Include="Samples\Colors.cs" />
+    <Compile Include="Samples\Frames.cs" />
+    <Compile Include="Samples\Checkboxes.cs" />
+    <Compile Include="Samples\WidgetEvents.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

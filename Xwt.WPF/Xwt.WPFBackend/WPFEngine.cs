@@ -24,8 +24,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Windows;
 
 using Xwt.Backends;
+using Xwt.Drawing;
 using Xwt.Engine;
 
 namespace Xwt.WPFBackend
@@ -41,6 +43,10 @@ namespace Xwt.WPFBackend
 			WidgetRegistry.RegisterBackend (typeof (Window), typeof (WindowBackend));
 			WidgetRegistry.RegisterBackend (typeof (Menu), typeof (MenuBackend));
 			WidgetRegistry.RegisterBackend (typeof (MenuItem), typeof (MenuItemBackend));
+			WidgetRegistry.RegisterBackend (typeof (Box), typeof (BoxBackend));
+			WidgetRegistry.RegisterBackend (typeof (Label), typeof (LabelBackend));
+
+			WidgetRegistry.RegisterBackend (typeof (Font), typeof (FontBackendHandler));
 		}
 
 		public override void RunApplication ()
@@ -61,6 +67,31 @@ namespace Xwt.WPFBackend
 		public override void CancelTimeoutInvoke (object id)
 		{
 			throw new NotImplementedException ();
+		}
+
+		public override IWindowFrameBackend GetBackendForWindow (object nativeWindow)
+		{
+			return new WindowFrameBackend () {
+				Window = (System.Windows.Window) nativeWindow
+			};
+		}
+
+		public override object GetNativeWidget (Widget w)
+		{
+			var backend = (IWpfWidgetBackend) WidgetRegistry.GetBackend (w);
+			return backend.Widget;
+		}
+
+		public override object GetNativeParentWindow (Widget w)
+		{
+			var backend = (IWpfWidgetBackend) WidgetRegistry.GetBackend (w);
+
+			FrameworkElement e = backend.Widget;
+			while ((e = e.Parent as FrameworkElement) != null)
+				if (e is System.Windows.Window)
+					return e;
+
+			return null;
 		}
 	}
 }

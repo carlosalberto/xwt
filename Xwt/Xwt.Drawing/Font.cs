@@ -39,18 +39,141 @@ namespace Xwt.Drawing
 			handler = WidgetRegistry.CreateSharedBackend<IFontBackendHandler> (typeof(Font));
 		}
 		
-		public static Font FromName (string name, double size)
-		{
-			Font f = new Font ();
-			f.Backend = handler.CreateFromName (name, size);
-			return f;
-		}
-		
-		protected override Xwt.Backends.IBackendHandler BackendHandler {
+		protected override IBackendHandler BackendHandler {
 			get {
 				return handler;
 			}
 		}
+		
+		internal Font (object backend)
+		{
+			Backend = backend;
+		}
+		
+		public static Font FromName (string name, double size)
+		{
+			return new Font (handler.CreateFromName (name, size));
+		}
+		
+		public Font WithFamily (string fontFamily)
+		{
+			return new Font (handler.SetFamily (Backend, fontFamily));
+		}
+		
+		public string Family {
+			get {
+				return handler.GetFamily (Backend);
+			}
+		}
+		
+		public double Size {
+			get {
+				return handler.GetSize (Backend);
+			}
+		}
+		
+		public Font WithSize (double size)
+		{
+			return new Font (handler.SetSize (Backend, size));
+		}
+		
+		public FontStyle Style {
+			get {
+				return handler.GetStyle (Backend);
+			}
+		}
+		
+		public Font WithStyle (FontStyle style)
+		{
+			return new Font (handler.SetStyle (Backend, style));
+		}
+		
+		public FontWeight Weight {
+			get {
+				return handler.GetWeight (Backend);
+			}
+		}
+		
+		public Font WithWeight (FontWeight weight)
+		{
+			return new Font (handler.SetWeight (Backend, weight));
+		}
+		
+		public FontStretch Stretch {
+			get {
+				return handler.GetStretch (Backend);
+			}
+		}
+		
+		public Font WithStretch (FontStretch stretch)
+		{
+			return new Font (handler.SetStretch (Backend, stretch));
+		}
+	}
+	
+	public enum FontStyle
+	{
+		Normal,
+		Oblique,
+		Italic
+	}
+	
+	public enum FontWeight
+	{
+		/// The ultralight weight (200)
+		Ultralight = 200,
+		/// The light weight (300)
+		Light = 300,
+		/// The default weight (400)
+		Normal = 400,
+		/// The semi bold weight (600)
+		Semibold = 600,
+		/// The bold weight (700)
+		Bold = 700,
+		/// The ultrabold weight (800)
+		Ultrabold = 800,
+		/// The heavy weight (900)
+		Heavy = 900
+	}
+	
+	public enum FontStretch
+	{
+		/// <summary>
+		/// 4x more condensed than Pango.Stretch.Normal
+		/// </summary>
+		UltraCondensed,
+		/// <summary>
+		/// 3x more condensed than Pango.Stretch.Normal
+		/// </summary>
+		ExtraCondensed,
+		/// <summary>
+		/// 2x more condensed than Pango.Stretch.Normal
+		/// </summary>
+		Condensed,
+		/// <summary>
+		/// 1x more condensed than Pango.Stretch.Normal
+		/// </summary>
+		SemiCondensed,
+		/// <summary>
+		/// The normal width
+		/// </summary>
+		Normal,
+		/// <summary>
+		/// 1x more expanded than Pango.Stretch.Normal
+		/// </summary>
+		SemiExpanded,
+		/// <summary>
+		/// 2x more expanded than Pango.Stretch.Normal
+		/// </summary>
+		Expanded,
+		/// <summary>
+		/// 3x more expanded than Pango.Stretch.Normal
+		/// </summary>
+		ExtraExpanded,
+		/// <summary>
+		/// 4x more expanded than Pango.Stretch.Normal
+		/// </summary>
+		UltraExpanded
 	}
 }
 

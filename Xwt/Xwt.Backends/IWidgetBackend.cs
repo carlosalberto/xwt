@@ -25,12 +25,14 @@
 // THE SOFTWARE.
 
 using System;
+using Xwt.Drawing;
 
 namespace Xwt.Backends
 {
-	public interface IWidgetBackend: IBackend, IDisposable
+	public interface IWidgetBackend: IBackend
 	{
 		void Initialize (IWidgetEventSink eventSink);
+		void Dispose (bool disposing);
 		
 		bool Visible { get; set; }
 		bool Sensitive { get; set; }
@@ -38,6 +40,18 @@ namespace Xwt.Backends
 		bool HasFocus { get; }
 		Size Size { get; }
 		Point ConvertToScreenCoordinates (Point widgetCoordinates);
+		
+		/// <summary>
+		/// Sets the minimum size of the widget
+		/// </summary>
+		/// <param name='width'>
+		/// Minimun width. If the value is -1, it means no minimum width.
+		/// </param>
+		/// <param name='height'>
+		/// Minimum height. If the value is -1, it means no minimum height.
+		/// </param>
+		void SetMinSize (double width, double height);
+		void SetNaturalSize (double width, double height);
 		
 		void SetFocus ();
 		
@@ -52,10 +66,14 @@ namespace Xwt.Backends
 		void DragStart (TransferDataSource data, DragDropAction allowedDragActions, object imageBackend, double hotX, double hotY);
 		void SetDragSource (string[] types, DragDropAction dragAction);
 		void SetDragTarget (string[] types, DragDropAction dragAction);
+		
+		object Font { get; set; }
+		Color BackgroundColor { get; set; }
 	}
 	
 	public interface IWidgetEventSink
 	{
+		// Events
 		void OnDragOverCheck (DragOverCheckEventArgs args);
 		void OnDragOver (DragOverEventArgs args);
 		void OnDragDropCheck (DragCheckEventArgs args);
@@ -64,6 +82,16 @@ namespace Xwt.Backends
 		void OnDragFinished (DragFinishedEventArgs args);
 		void OnKeyPressed (KeyEventArgs args);
 		void OnKeyReleased (KeyEventArgs args);
+		void OnGotFocus ();
+		void OnLostFocus ();
+		void OnMouseEntered ();
+		void OnMouseExited ();
+
+		// Events
+		WidgetSize OnGetPreferredWidth ();
+		WidgetSize OnGetPreferredHeight ();
+		WidgetSize OnGetPreferredHeightForWidth (double width);
+		WidgetSize OnGetPreferredWidthForHeight (double height);
 		
 		/// <summary>
 		/// Notifies the frontend that the preferred size of this widget has changed
@@ -78,6 +106,7 @@ namespace Xwt.Backends
 		/// a result of clicking on it.
 		/// </remarks>
 		void OnPreferredSizeChanged ();
+		SizeRequestMode GetSizeRequestMode ();
 	}
 	
 	[Flags]
@@ -89,7 +118,15 @@ namespace Xwt.Backends
 		DragDrop = 1 << 3,
 		DragLeave = 1 << 4,
 		KeyPressed = 1 << 5,
-		KeyReleased = 1 << 6
+		KeyReleased = 1 << 6,
+		PreferredWidthCheck = 1 << 7,
+		PreferredHeightCheck = 1 << 8,
+		PreferredWidthForHeightCheck = 1 << 9,
+		PreferredHeightForWidthCheck = 1 << 10,
+		GotFocus = 1 << 11,
+		LostFocus = 1 << 12,
+		MouseEntered = 1 << 13,
+		MouseExited = 1 << 14
 	}
 	
 	public interface DragOperationEventSink

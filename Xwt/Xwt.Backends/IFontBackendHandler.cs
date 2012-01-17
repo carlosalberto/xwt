@@ -25,12 +25,27 @@
 // THE SOFTWARE.
 
 using System;
+using Xwt.Drawing;
 
 namespace Xwt.Backends
 {
 	public interface IFontBackendHandler: IBackendHandler
 	{
 		object CreateFromName (string fontName, double size);
+		object Copy (object handle);
+		
+		object SetSize (object handle, double size);
+		object SetFamily (object handle, string family);
+		object SetStyle (object handle, FontStyle style);
+		object SetWeight (object handle, FontWeight weight);
+		object SetStretch (object handle, FontStretch stretch);
+		
+		double GetSize (object handle);
+		string GetFamily (object handle);
+		FontStyle GetStyle (object handle);
+		FontWeight GetWeight (object handle);
+		FontStretch GetStretch (object handle);
+		
 	}
 }
 

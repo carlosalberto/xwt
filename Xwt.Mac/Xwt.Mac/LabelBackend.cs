@@ -51,7 +51,7 @@ namespace Xwt.Mac
 			}
 		}
 		
-		public Alignment HorizontalAlignment {
+		public Alignment TextAlignment {
 			get {
 				switch (Widget.Alignment) {
 				case NSTextAlignment.Left: return Alignment.Start;

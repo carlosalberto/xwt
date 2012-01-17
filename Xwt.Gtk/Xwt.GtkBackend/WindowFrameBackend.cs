@@ -25,6 +25,7 @@
 // THE SOFTWARE.
 using System;
 using Xwt.Backends;
+using Xwt.Engine;
 
 namespace Xwt.GtkBackend
 {
@@ -38,7 +39,7 @@ namespace Xwt.GtkBackend
 		{
 		}
 		
-		protected Gtk.Window Window {
+		public Gtk.Window Window {
 			get { return window; }
 			set { window = value; }
 		}
@@ -52,6 +53,11 @@ namespace Xwt.GtkBackend
 			this.frontend = (WindowFrame) frontend;
 		}
 
+		public virtual void ReplaceChild (Gtk.Widget oldWidget, Gtk.Widget newWidget)
+		{
+			throw new NotSupportedException ();
+		}
+		
 		#region IWindowFrameBackend implementation
 		void IWindowFrameBackend.Initialize (IWindowFrameEventSink eventSink)
 		{
@@ -61,6 +67,12 @@ namespace Xwt.GtkBackend
 		
 		public virtual void Initialize ()
 		{
+		}
+		
+		public virtual void Dispose (bool disposing)
+		{
+			if (disposing)
+				Window.Destroy ();
 		}
 		
 		public IWindowFrameEventSink EventSink {
@@ -78,7 +90,9 @@ namespace Xwt.GtkBackend
 				Window.Move ((int)value.X, (int)value.Y);
 				Window.Resize ((int)value.Width, (int)value.Height);
 				Window.SetDefaultSize ((int)value.Width, (int)value.Height);
-				EventSink.OnBoundsChanged (Bounds);
+				Toolkit.Invoke (delegate {
+					EventSink.OnBoundsChanged (Bounds);
+				});
 			}
 		}
 
@@ -118,23 +132,29 @@ namespace Xwt.GtkBackend
 
 		public virtual void EnableEvent (object ev)
 		{
-			switch ((WindowFrameEvent)ev) {
-			case WindowFrameEvent.BoundsChanged:
-				Window.SizeAllocated += HandleWidgetSizeAllocated; break;
+			if (ev is WindowFrameEvent) {
+				switch ((WindowFrameEvent)ev) {
+				case WindowFrameEvent.BoundsChanged:
+					Window.SizeAllocated += HandleWidgetSizeAllocated; break;
+				}
+			}
+		}
+
+		public virtual void DisableEvent (object ev)
+		{
+			if (ev is WindowFrameEvent) {
+				switch ((WindowFrameEvent)ev) {
+				case WindowFrameEvent.BoundsChanged:
+					Window.SizeAllocated -= HandleWidgetSizeAllocated; break;
+				}
 			}
 		}
 
 		void HandleWidgetSizeAllocated (object o, Gtk.SizeAllocatedArgs args)
 		{
-			EventSink.OnBoundsChanged (new Rectangle (args.Allocation.X, args.Allocation.Y, args.Allocation.Width, args.Allocation.Height));
-		}
-
-		public virtual void DisableEvent (object ev)
-		{
-			switch ((WindowFrameEvent)ev) {
-			case WindowFrameEvent.BoundsChanged:
-				Window.SizeAllocated -= HandleWidgetSizeAllocated; break;
-			}
+			Toolkit.Invoke (delegate {
+				EventSink.OnBoundsChanged (new Rectangle (args.Allocation.X, args.Allocation.Y, args.Allocation.Width, args.Allocation.Height));
+			});
 		}
 	}
 }

@@ -26,11 +26,14 @@
 
 using System;
 using Xwt.Backends;
+using Xwt.Engine;
 
 namespace Xwt.GtkBackend
 {
 	public class ButtonBackend: WidgetBackend, IButtonBackend
 	{
+		protected bool ignoreClickEvents;
+		
 		public ButtonBackend ()
 		{
 		}
@@ -38,7 +41,8 @@ namespace Xwt.GtkBackend
 		public override void Initialize ()
 		{
 			Widget = new Gtk.Button ();
-			Widget.Show ();
+			base.Widget.Show ();
+			
 		}
 		
 		protected new Gtk.Button Widget {
@@ -49,37 +53,90 @@ namespace Xwt.GtkBackend
 		protected new IButtonEventSink EventSink {
 			get { return (IButtonEventSink)base.EventSink; }
 		}
-
-		public void SetContent (string label, object imageBackend)
+		
+		public void SetContent (string label, object imageBackend, ContentPosition position)
 		{
-			Gdk.Pixbuf pix = (Gdk.Pixbuf)imageBackend;
-			if (label != null && imageBackend == null)
+			if (label != null && label.Length == 0)
+				label = null;
+			
+			Button b = (Button) Frontend;
+			if (label != null && imageBackend == null && b.Type == ButtonType.Normal) {
 				Widget.Label = label;
-			else if (label == null && imageBackend != null) {
-				var img = new Gtk.Image (pix);
-				img.Show ();
-				Widget.Image = img;
-			} else if (label != null && imageBackend != null) {
-				Gtk.HBox box = new Gtk.HBox (false, 3);
-				var img = new Gtk.Image (pix);
-				box.PackStart (img, false, false, 0);
-				var lab = new Gtk.Label (label);
-				box.PackStart (lab, false, false, 0);
-				box.ShowAll ();
-				Widget.Image = box;
+				return;
 			}
+			
+			if (b.Type == ButtonType.Disclosure) {
+				Widget.Label = null;
+				Widget.Image = new Gtk.Arrow (Gtk.ArrowType.Down, Gtk.ShadowType.Out);
+				Widget.Image.ShowAll ();
+				return;
+			}
+			
+			Gtk.Widget contentWidget = null;
+			
+			Gtk.Widget imageWidget = null;
+			if (imageBackend != null)
+				imageWidget = new Gtk.Image ((Gdk.Pixbuf)imageBackend);
+			
+			if (label != null && imageWidget == null) {
+				contentWidget = new Gtk.Label (label); 
+			}
+			else if (label == null && imageWidget != null) {
+				contentWidget = imageWidget;
+			}
+			else if (label != null && imageWidget != null) {
+				Gtk.Box box = position == ContentPosition.Left || position == ContentPosition.Right ? (Gtk.Box) new Gtk.HBox (false, 3) : (Gtk.Box) new Gtk.VBox (false, 3);
+				var lab = new Gtk.Label (label);
+				
+				if (position == ContentPosition.Left || position == ContentPosition.Top) {
+					box.PackStart (imageWidget, false, false, 0);
+					box.PackStart (lab, false, false, 0);
+				} else {
+					box.PackStart (lab, false, false, 0);
+					box.PackStart (imageWidget, false, false, 0);
+				}
+				
+				contentWidget = box;
+			}
+			if (b.Type == ButtonType.DropDown) {
+				if (contentWidget != null) {
+					Gtk.HBox box = new Gtk.HBox (false, 3);
+					box.PackStart (contentWidget, true, true, 0);
+					box.PackStart (new Gtk.Arrow (Gtk.ArrowType.Down, Gtk.ShadowType.Out), false, false, 0);
+					contentWidget = box;
+				} else
+					contentWidget = new Gtk.Arrow (Gtk.ArrowType.Down, Gtk.ShadowType.Out);
+			}
+			if (contentWidget != null) {
+				contentWidget.ShowAll ();
+				Widget.Label = null;
+				Widget.Image = contentWidget;
+			} else
+				Widget.Label = null;
 		}
 		
 		public void SetButtonStyle (ButtonStyle style)
 		{
 			switch (style) {
 			case ButtonStyle.Normal:
+				SetMiniMode (false);
 				Widget.Relief = Gtk.ReliefStyle.Normal;
 				break;
 			case ButtonStyle.Flat:
+				SetMiniMode (false);
+				Widget.Relief = Gtk.ReliefStyle.None;
+				break;
+			case ButtonStyle.Borderless:
+				SetMiniMode (true);
 				Widget.Relief = Gtk.ReliefStyle.None;
 				break;
 			}
+		}
+		
+		public void SetButtonType (ButtonType type)
+		{
+			Button b = (Button) Frontend;
+			SetContent (b.Label, WidgetRegistry.GetBackend (b.Image), b.ImagePosition);
 		}
 		
 		public override void EnableEvent (object eventId)
@@ -104,7 +161,51 @@ namespace Xwt.GtkBackend
 
 		void HandleWidgetClicked (object sender, EventArgs e)
 		{
-			EventSink.OnClicked ();
+			if (!ignoreClickEvents) {
+				Toolkit.Invoke (delegate {
+					EventSink.OnClicked ();
+				});
+			}
+		}
+		
+		bool miniMode;
+		
+		protected void SetMiniMode (bool miniMode)
+		{
+//			Gtk.Rc.ParseString ("style \"Xwt.GtkBackend.CustomButton\" {\n GtkButton::inner-border = {0,0,0,0} GtkButton::child-displacement-x = {0} GtkButton::child-displacement-y = {0}\n }\n");
+//			Gtk.Rc.ParseString ("widget \"*.Xwt.GtkBackend.CustomButton\" style  \"Xwt.GtkBackend.CustomButton\"\n");
+//			Name = "Xwt.GtkBackend.CustomButton";
+			
+			if (this.miniMode == miniMode)
+				return;
+			this.miniMode = miniMode;
+			if (miniMode) {
+				Widget.ExposeEvent += HandleExposeEvent;
+				Widget.SizeAllocated += HandleSizeAllocated;
+				Widget.SizeRequested += HandleSizeRequested;
+			}
+			Widget.QueueResize ();
+		}
+
+		void HandleSizeRequested (object o, Gtk.SizeRequestedArgs args)
+		{
+			args.Requisition = Widget.Child.SizeRequest ();
+		}
+
+		[GLib.ConnectBefore]
+		void HandleSizeAllocated (object o, Gtk.SizeAllocatedArgs args)
+		{
+			Widget.Child.SizeAllocate (args.Allocation);
+			args.RetVal = true;
+		}
+
+		[GLib.ConnectBefore]
+		void HandleExposeEvent (object o, Gtk.ExposeEventArgs args)
+		{
+			var gc = Widget.Style.BackgroundGC (Widget.State);
+			Widget.GdkWindow.DrawRectangle (gc, true, Widget.Allocation);
+			Widget.PropagateExpose (Widget.Child, args.Event);
+			args.RetVal = true;
 		}
 	}
 }

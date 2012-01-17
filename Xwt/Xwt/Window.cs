@@ -37,8 +37,10 @@ namespace Xwt
 		
 		protected new class EventSink: WindowFrame.EventSink, ISpacingListener
 		{
-			public void OnSpacingChanged (string spacingType)
+			public void OnSpacingChanged (WidgetSpacing source)
 			{
+				var w = (Window) Parent;
+				w.Backend.SetPadding (w.padding.Left, w.padding.Top, w.padding.Right, w.padding.Bottom);
 			}
 		}
 		
@@ -49,13 +51,13 @@ namespace Xwt
 		
 		public Window ()
 		{
-			padding = new WidgetSpacing ((EventSink)WindowEventSink, null);
+			padding = new WidgetSpacing ((EventSink)WindowEventSink);
 			padding.SetAll (6);
 		}
 		
 		public Window (string title): base (title)
 		{
-			padding = new WidgetSpacing ((EventSink)WindowEventSink, null);
+			padding = new WidgetSpacing ((EventSink)WindowEventSink);
 		}
 		
 		new IWindowBackend Backend {
@@ -92,12 +94,12 @@ namespace Xwt
 		
 		protected override void OnReallocate ()
 		{
-			if (child != null) {
+			if (child != null && !Application.EngineBackend.HandlesSizeNegotiation) {
 				((IWidgetSurface)child).Reallocate ();
 			}
 		}
 		
-		void AdjustSize ()
+		internal void AdjustSize ()
 		{
 			IWidgetSurface s = child;
 			var w = s.GetPreferredWidth ().MinSize;

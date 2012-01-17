@@ -30,6 +30,12 @@ namespace Xwt.Backends
 {
 	public interface ITreeStoreBackend: ITreeDataSource, IBackend
 	{
+		// WARNING: You don't need to implement this backend.
+		// Xwt provides a default implementation.
+		// You only need to implement it if the underlying widget
+		// toolkit has its own tree store implementation which
+		// can be plugged into a TreeView
+		
 		void Initialize (Type[] columnTypes);
 		TreePosition InsertBefore (TreePosition pos);
 		TreePosition InsertAfter (TreePosition pos);
@@ -37,6 +43,7 @@ namespace Xwt.Backends
 		void Remove (TreePosition pos);
 		TreePosition GetNext (TreePosition pos);
 		TreePosition GetPrevious (TreePosition pos);
+		void Clear ();
 	}
 }
 

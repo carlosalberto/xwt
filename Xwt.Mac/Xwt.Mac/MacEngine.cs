@@ -69,6 +69,7 @@ namespace Xwt.Mac
 			WidgetRegistry.RegisterBackend (typeof(Xwt.ComboBox), typeof(ComboBoxBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.TextEntry), typeof(TextEntryBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.ImageView), typeof(ImageViewBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.Table), typeof(BoxBackend));
 		}
 
 		public override void RunApplication ()
@@ -126,6 +127,16 @@ namespace Xwt.Mac
 			throw new NotImplementedException ();
 		}
 		
+		public override object GetNativeWidget (Widget w)
+		{
+			IMacViewBackend wb = (IMacViewBackend)Xwt.Engine.WidgetRegistry.GetBackend (w);
+			return wb.View;
+		}
+		
+		public override Xwt.Backends.IWindowFrameBackend GetBackendForWindow (object nativeWindow)
+		{
+			throw new NotImplementedException ();
+		}
 	}
 	
 	public interface IViewContainer

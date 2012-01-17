@@ -30,7 +30,15 @@ namespace Xwt
 	public enum ButtonStyle
 	{
 		Normal,
-		Flat
+		Flat,
+		Borderless
+	}
+	
+	public enum ButtonType
+	{
+		Normal,
+		DropDown,
+		Disclosure
 	}
 }
 

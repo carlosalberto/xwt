@@ -43,6 +43,19 @@ namespace Xwt.Backends
 		public abstract object TimeoutInvoke (Func<bool> action, TimeSpan timeSpan);
 
 		public abstract void CancelTimeoutInvoke (object id);
+		
+		public abstract object GetNativeWidget (Widget w);
+		
+		public abstract IWindowFrameBackend GetBackendForWindow (object nativeWindow);
+		
+		public virtual object GetNativeParentWindow (Widget w)
+		{
+			return null;
+		}
+		
+		public virtual bool HandlesSizeNegotiation {
+			get { return false; }
+		}
 	}
 }
 

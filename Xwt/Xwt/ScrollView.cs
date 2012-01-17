@@ -56,10 +56,10 @@ namespace Xwt
 		
 		public ScrollView (Widget child)
 		{
-			Child = child;
+			Content = child;
 		}
 		
-		public Widget Child {
+		public new Widget Content {
 			get { return child; }
 			set {
 				if (child != null)
@@ -79,8 +79,7 @@ namespace Xwt
 		
 		public ScrollPolicy HorizontalScrollPolicy {
 			get { return Backend.HorizontalScrollPolicy; }
-			set { Backend.HorizontalScrollPolicy = value;
-				OnPreferredSizeChanged (); }
+			set { Backend.HorizontalScrollPolicy = value; OnPreferredSizeChanged (); }
 		}
 		
 		public Rectangle VisibleRect {

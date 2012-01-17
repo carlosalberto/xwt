@@ -36,6 +36,7 @@ namespace Xwt.GtkBackend
 		{
 			Gtk.Application.Init ();
 			
+			WidgetRegistry.RegisterBackend (typeof(Xwt.Widget), typeof(CustomWidgetBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.Window), typeof(WindowBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.Label), typeof(LabelBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.HBox), typeof(BoxBackend));
@@ -62,17 +63,52 @@ namespace Xwt.GtkBackend
 			WidgetRegistry.RegisterBackend (typeof(Xwt.ToggleButton), typeof(ToggleButtonBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.ImageView), typeof(ImageViewBackend));
 			WidgetRegistry.RegisterBackend (typeof(Xwt.Backends.IAlertDialogBackend), typeof(AlertDialogBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.Table), typeof(BoxBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.CheckBox), typeof(CheckBoxBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.Frame), typeof(FrameBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.VSeparator), typeof(SeparatorBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.HSeparator), typeof(SeparatorBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.Dialog), typeof(DialogBackend));
+			WidgetRegistry.RegisterBackend (typeof(Xwt.ComboBoxEntry), typeof(ComboBoxEntryBackend));
 		}
 
 		public override void RunApplication ()
 		{
 			Gtk.Application.Run ();
 		}
+		
+		public override bool HandlesSizeNegotiation {
+			get {
+				return true;
+			}
+		}
 
-		public static void ReplaceChild (Gtk.Container cont, Gtk.Widget oldWidget, Gtk.Widget newWidget)
+		public static void ReplaceChild (Gtk.Widget oldWidget, Gtk.Widget newWidget)
 		{
+			Gtk.Container cont = oldWidget.Parent as Gtk.Container;
+			if (cont == null)
+				return;
+			
 			if (cont is IGtkContainer) {
 				((IGtkContainer)cont).ReplaceChild (oldWidget, newWidget);
+			}
+			else if (cont is Gtk.Notebook) {
+				Gtk.Notebook notebook = (Gtk.Notebook) cont;
+				Gtk.Notebook.NotebookChild nc = (Gtk.Notebook.NotebookChild) notebook[oldWidget];
+				var detachable = nc.Detachable;
+				var pos = nc.Position;
+				var reorderable = nc.Reorderable;
+				var tabExpand = nc.TabExpand;
+				var tabFill = nc.TabFill;
+				var label = notebook.GetTabLabel (oldWidget);
+				notebook.Remove (oldWidget);
+				notebook.InsertPage (newWidget, label, pos);
+				
+				nc = (Gtk.Notebook.NotebookChild) notebook[newWidget];
+				nc.Detachable = detachable;
+				nc.Reorderable = reorderable;
+				nc.TabExpand = tabExpand;
+				nc.TabFill = tabFill;
 			}
 			else if (cont is Gtk.Bin) {
 				((Gtk.Bin)cont).Remove (oldWidget);
@@ -97,6 +133,25 @@ namespace Xwt.GtkBackend
 		public override void CancelTimeoutInvoke (object id)
 		{
 			GLib.Source.Remove ((uint)id);
+		}
+		
+		public override object GetNativeWidget (Widget w)
+		{
+			IGtkWidgetBackend wb = (IGtkWidgetBackend)Xwt.Engine.WidgetRegistry.GetBackend (w);
+			return wb.Widget;
+		}
+		
+		public override IWindowFrameBackend GetBackendForWindow (object nativeWindow)
+		{
+			var win = new WindowFrameBackend ();
+			win.Window = (Gtk.Window) nativeWindow;
+			return win;
+		}
+		
+		public override object GetNativeParentWindow (Widget w)
+		{
+			IGtkWidgetBackend wb = (IGtkWidgetBackend)Xwt.Engine.WidgetRegistry.GetBackend (w);
+			return wb.Widget.Toplevel as Gtk.Window;
 		}
 	}
 	

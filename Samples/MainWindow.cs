@@ -48,18 +48,26 @@ namespace Samples
 			
 			AddSample (null, "Boxes", typeof(Boxes));
 			AddSample (null, "Buttons", typeof(ButtonSample));
+			AddSample (null, "CheckBox", typeof(Checkboxes));
 			AddSample (null, "ComboBox", typeof(ComboBoxes));
 //			AddSample (null, "Designer", typeof(Designer));
 			AddSample (null, "Drag & Drop", typeof(DragDrop));
+			
 			var n = AddSample (null, "Drawing", null);
 			AddSample (n, "Canvas with Widget", typeof(CanvasWithWidget));
 			AddSample (n, "Chart", typeof(ChartSample));
+			AddSample (n, "Colors", typeof(Colors));
 			AddSample (n, "Transformations", typeof(DrawingTransforms));
+			
+			AddSample (null, "Frames", typeof(Frames));
 			AddSample (null, "Images", typeof(Images));
+			AddSample (null, "Labels", typeof(Labels));
 			AddSample (null, "List View", typeof(ListView1));
 			AddSample (null, "Notebook", typeof(NotebookSample));
-//			AddSample (null, "Scroll View", typeof(ScrollWindowSample));
+			AddSample (null, "Scroll View", typeof(ScrollWindowSample));
+			AddSample (null, "Tables", typeof(Tables));
 			AddSample (null, "Text Entry", typeof(TextEntries));
+			AddSample (null, "WidgetEvents", typeof(WidgetEvents));
 			AddSample (null, "Windows", typeof(Windows));
 			
 			samplesTree.DataSource = store;
@@ -79,10 +87,10 @@ namespace Samples
 
 		void HandleSamplesTreeSelectionChanged (object sender, EventArgs e)
 		{
-			if (samplesTree.SelectedItem != null) {
+			if (samplesTree.SelectedRow != null) {
 				if (currentSample != null)
 					sampleBox.Remove (currentSample);
-				Sample s = store.GetNavigatorAt (samplesTree.SelectedItem).GetValue (widgetCol);
+				Sample s = store.GetNavigatorAt (samplesTree.SelectedRow).GetValue (widgetCol);
 				if (s.Type != null) {
 					if (s.Widget == null)
 						s.Widget = (Widget)Activator.CreateInstance (s.Type);

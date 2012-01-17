@@ -27,10 +27,8 @@ using System;
 
 namespace Xwt.Backends
 {
-	public interface IMenuButtonBackend
+	public interface IMenuButtonBackend: IButtonBackend
 	{
-		void SetButtonStyle (ButtonStyle style);
-		void SetContent (string label, object imageBackend);
 	}
 	
 	public interface IMenuButtonEventSink

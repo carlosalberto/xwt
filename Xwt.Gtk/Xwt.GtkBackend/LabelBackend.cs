@@ -26,44 +26,76 @@
 
 using System;
 using Xwt.Backends;
+using Xwt.Drawing;
 
 
 namespace Xwt.GtkBackend
 {
 	class LabelBackend: WidgetBackend, ILabelBackend
 	{
+		Color backColor;
+		bool usingCustomColor;
+		
 		public LabelBackend ()
 		{
 			Widget = new Gtk.Label ();
-			Widget.Show ();
-			Widget.Xalign = 0;
-			Widget.Yalign = 0;
+			Label.Show ();
+			Label.Xalign = 0;
+			Label.Yalign = 0.5f;
 		}
 		
-		new Gtk.Label Widget {
-			get { return (Gtk.Label) base.Widget; }
-			set { base.Widget = value; }
+		Gtk.Label Label {
+			get {
+				if (Widget is Gtk.Label)
+					return (Gtk.Label) Widget;
+				else
+					return (Gtk.Label) ((Gtk.EventBox)base.Widget).Child;
+			}
+		}
+		
+		public override Xwt.Drawing.Color BackgroundColor {
+			get {
+				return usingCustomColor ? backColor : base.BackgroundColor;
+			}
+			set {
+				if (!usingCustomColor) {
+					Label.ExposeEvent += HandleLabelExposeEvent;
+					usingCustomColor = true;
+				}
+				backColor = value;
+				Label.QueueDraw ();
+			}
+		}
+		
+		[GLib.ConnectBefore]
+		void HandleLabelExposeEvent (object o, Gtk.ExposeEventArgs args)
+		{
+			using (var ctx = Gdk.CairoHelper.Create (Label.GdkWindow)) {
+				ctx.Rectangle (Label.Allocation.X, Label.Allocation.Y, Label.Allocation.Width, Label.Allocation.Height);
+				ctx.Color = Util.ToCairoColor (backColor);
+				ctx.Fill ();
+			}
 		}
 		
 		public string Text {
-			get { return Widget.Text; }
-			set { Widget.Text = value; }
+			get { return Label.Text; }
+			set { Label.Text = value; }
 		}
 
-		public Alignment HorizontalAlignment {
+		public Alignment TextAlignment {
 			get {
-				if (Widget.Xalign == 0)
+				if (Label.Xalign == 0)
 					return Alignment.Start;
-				else if (Widget.Xalign == 1)
+				else if (Label.Xalign == 1)
 					return Alignment.End;
 				else
 					return Alignment.Center;
 			}
 			set {
 				switch (value) {
-				case Alignment.Start: Widget.Xalign = 0; break;
-				case Alignment.End: Widget.Xalign = 1; break;
-				case Alignment.Center: Widget.Xalign = 0.5f; break;
+				case Alignment.Start: Label.Xalign = 0; break;
+				case Alignment.End: Label.Xalign = 1; break;
+				case Alignment.Center: Label.Xalign = 0.5f; break;
 				}
 			}
 		}

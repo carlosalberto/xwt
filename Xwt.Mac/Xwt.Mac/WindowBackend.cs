@@ -29,6 +29,7 @@ using Xwt.Backends;
 using MonoMac.AppKit;
 using System.Drawing;
 using MonoMac.ObjCRuntime;
+using Xwt.Engine;
 
 namespace Xwt.Mac
 {
@@ -120,7 +121,9 @@ namespace Xwt.Mac
 
 		void HandleDidResize (object sender, EventArgs e)
 		{
-			eventSink.OnBoundsChanged (((IWindowBackend)this).Bounds);
+			Toolkit.Invoke (delegate {
+				eventSink.OnBoundsChanged (((IWindowBackend)this).Bounds);
+			});
 		}
 
 		void IWindowBackend.SetChild (IWidgetBackend child)
@@ -131,7 +134,7 @@ namespace Xwt.Mac
 			this.child = (IMacViewBackend) child;
 			if (child != null) {
 				ContentView.AddSubview (this.child.View);
-				UpdateLayout ();
+				SetPadding (frontend.Padding.Left, frontend.Padding.Top, frontend.Padding.Right, frontend.Padding.Bottom);
 				this.child.View.AutoresizingMask = NSViewResizingMask.HeightSizable | NSViewResizingMask.WidthSizable;
 			}
 		}
@@ -156,14 +159,14 @@ namespace Xwt.Mac
 			}
 		}
 		
-		public virtual void UpdateLayout ()
+		public void SetPadding (double left, double top, double right, double bottom)
 		{
 			if (child != null) {
 				var frame = ContentView.Frame;
-				frame.X += frontend.Padding.Left;
-				frame.Width -= frontend.Padding.HorizontalSpacing;
-				frame.Y += frontend.Padding.Top;
-				frame.Height -= frontend.Padding.VerticalSpacing;
+				frame.X += (float) left;
+				frame.Width -= (float) (left + right);
+				frame.Y += (float) top;
+				frame.Height -= (float) (top + bottom);
 				child.View.Frame = frame;
 			}
 		}
@@ -190,9 +193,10 @@ namespace Xwt.Mac
 
 		static Selector closeSel = new Selector ("close");
 		
-		void IDisposable.Dispose ()
+		void IWindowFrameBackend.Dispose (bool disposing)
 		{
-			Messaging.void_objc_msgSend (this.Handle, closeSel.Handle);
+			if (disposing)
+				Messaging.void_objc_msgSend (this.Handle, closeSel.Handle);
 		}
 		
 		public void DragStart (TransferDataSource data, DragDropAction dragAction, object dragImage, double xhot, double yhot)

@@ -26,6 +26,7 @@
 using System;
 using Xwt.Backends;
 using MonoMac.AppKit;
+using Xwt.Engine;
 
 namespace Xwt.Mac
 {
@@ -69,6 +70,15 @@ namespace Xwt.Mac
 				Widget.Bordered = value;
 			}
 		}
+		
+		public string PlaceholderText {
+			get {
+				return ((NSTextFieldCell) Widget.Cell).PlaceholderString;
+			}
+			set {
+				((NSTextFieldCell) Widget.Cell).PlaceholderString = value;
+			}
+		}
 		#endregion
 	}
 	
@@ -92,7 +102,9 @@ namespace Xwt.Mac
 		public override void DidChange (MonoMac.Foundation.NSNotification notification)
 		{
 			base.DidChange (notification);
-			eventSink.OnChanged ();
+			Toolkit.Invoke (delegate {
+				eventSink.OnChanged ();
+			});
 		}
 	}
 }

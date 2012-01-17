@@ -45,20 +45,25 @@ namespace Xwt
 		WidgetSize height;
 		bool widthCached;
 		bool heightCached;
-		static HashSet<Widget> resizeRequestQueue = new HashSet<Widget> ();
 		EventSink eventSink;
 		DragOperation currentDragOperation;
 		Widget contentWidget;
 		WindowFrame parentWindow;
+		double minWidth = -1, minHeight = -1;
+		double naturalWidth = -1, naturalHeight = -1;
 		
 		EventHandler<DragOverCheckEventArgs> dragOverCheck;
 		EventHandler<DragOverEventArgs> dragOver;
 		EventHandler<DragCheckEventArgs> dragDropCheck;
 		EventHandler<DragEventArgs> dragDrop;
 		EventHandler dragLeave;
-		
 		EventHandler<KeyEventArgs> keyPressed;
 		EventHandler<KeyEventArgs> keyReleased;
+		EventHandler mouseEntered;
+		EventHandler mouseExited;
+		
+		EventHandler gotFocus;
+		EventHandler lostFocus;
 		
 		protected class EventSink: IWidgetEventSink, ISpacingListener
 		{
@@ -109,9 +114,55 @@ namespace Xwt
 				Parent.OnKeyReleased (args);
 			}
 			
-			public void OnSpacingChanged (string spacingType)
+			public virtual void OnSpacingChanged (WidgetSpacing source)
 			{
-				Parent.OnPreferredSizeChanged ();
+				if (source == Parent.margin)
+					Parent.OnPreferredSizeChanged ();
+			}
+			
+			public WidgetSize OnGetPreferredWidth ()
+			{
+				return Parent.OnGetPreferredWidth ();
+			}
+			
+			public WidgetSize OnGetPreferredHeight ()
+			{
+				return Parent.OnGetPreferredWidth ();
+			}
+			
+			public WidgetSize OnGetPreferredHeightForWidth (double width)
+			{
+				return Parent.OnGetPreferredHeightForWidth (width);
+			}
+			
+			public WidgetSize OnGetPreferredWidthForHeight (double height)
+			{
+				return Parent.OnGetPreferredWidthForHeight (height);
+			}
+			
+			public SizeRequestMode GetSizeRequestMode ()
+			{
+				return ((IWidgetSurface)Parent).SizeRequestMode;
+			}
+			
+			public void OnGotFocus ()
+			{
+				Parent.OnGotFocus (EventArgs.Empty);
+			}
+			
+			public void OnLostFocus ()
+			{
+				Parent.OnLostFocus (EventArgs.Empty);
+			}
+			
+			public void OnMouseEntered ()
+			{
+				Parent.OnMouseEntered (EventArgs.Empty);
+			}
+			
+			public void OnMouseExited ()
+			{
+				Parent.OnMouseExited (EventArgs.Empty);
 			}
 		}
 		
@@ -119,7 +170,7 @@ namespace Xwt
 		{
 			eventSink = CreateEventSink ();
 			eventSink.Parent = this;
-			margin = new Xwt.WidgetSpacing (eventSink, null);
+			margin = new Xwt.WidgetSpacing (eventSink);
 		}
 		
 		static Widget ()
@@ -131,14 +182,29 @@ namespace Xwt
 			MapEvent (WidgetEvent.DragLeave, typeof(Widget), "OnDragLeave");
 			MapEvent (WidgetEvent.KeyPressed, typeof(Widget), "OnKeyPressed");
 			MapEvent (WidgetEvent.KeyReleased, typeof(Widget), "OnKeyPressed");
+			MapEvent (WidgetEvent.GotFocus, typeof(Widget), "OnGotFocus");
+			MapEvent (WidgetEvent.LostFocus, typeof(Widget), "OnLostFocus");
+			MapEvent (WidgetEvent.MouseEntered, typeof(Widget), "OnMouseEntered");
+			MapEvent (WidgetEvent.MouseExited, typeof(Widget), "OnMouseExited");
+		}
+		
+		protected override void Dispose (bool disposing)
+		{
+			base.Dispose (disposing);
+			if (Backend != null)
+				Backend.Dispose (disposing);
 		}
 		
 		public WindowFrame ParentWindow {
 			get {
 				if (Parent != null)
 					return Parent.ParentWindow;
-				else
-					return parentWindow;
+				else if (parentWindow == null) {
+					var p = Application.EngineBackend.GetNativeParentWindow (this);
+					if (p != null)
+						parentWindow = WidgetRegistry.WrapWindow (p);
+				}
+				return parentWindow;
 			}
 		}
 		
@@ -163,6 +229,7 @@ namespace Xwt
 				while (t != wt) {
 					if (t.Assembly == wt.Assembly)
 						return null; // It's a core widget
+					t = t.BaseType;
 				}
 				return WidgetRegistry.CreateBackend<IBackend> (wt);
 			}
@@ -236,6 +303,102 @@ namespace Xwt
 		
 		public Size Size {
 			get { return Backend.Size; }
+		}
+		
+		/// <summary>
+		/// Gets or sets the minimum width.
+		/// </summary>
+		/// <value>
+		/// The minimum width.
+		/// </value>
+		/// <remarks>
+		/// Minimum width for the widget. If set to -1, the widget's default minimun size will be used.
+		/// </remarks>
+		[DefaultValue((double)-1)]
+		public double MinWidth {
+			get { return minWidth; }
+			set {
+				minWidth = value;
+				Backend.SetMinSize (minWidth >= 0 ? minWidth : -1, minHeight >= 0 ? minHeight : -1);
+				OnPreferredSizeChanged ();
+			}
+		}
+		
+		/// <summary>
+		/// Gets or sets the minimum height.
+		/// </summary>
+		/// <value>
+		/// The minimum height.
+		/// </value>
+		/// <remarks>
+		/// Minimum height for the widget. If set to -1, the widget's default minimun size will be used.
+		/// </remarks>
+		[DefaultValue((double)-1)]
+		public double MinHeight {
+			get { return minHeight; }
+			set {
+				minHeight = value;
+				Backend.SetMinSize (minWidth >= 0 ? minWidth : -1, minHeight >= 0 ? minHeight : -1);
+				OnPreferredSizeChanged ();
+			}
+		}
+		
+		/// <summary>
+		/// Gets or sets the natural width.
+		/// </summary>
+		/// <value>
+		/// The natural width, or -1 if no custom natural width has been set
+		/// </value>
+		/// <remarks>
+		/// Natural width for the widget. If set to -1, the default natural size is used.
+		/// </remarks>
+		[DefaultValue((double)-1)]
+		public double NaturalWidth {
+			get { return minWidth; }
+			set {
+				naturalWidth = value;
+				Backend.SetNaturalSize (naturalWidth >= 0 ? naturalWidth : -1, naturalHeight >= 0 ? naturalHeight : -1);
+				OnPreferredSizeChanged ();
+			}
+		}
+		
+		/// <summary>
+		/// Gets or sets the natural height.
+		/// </summary>
+		/// <value>
+		/// The natural height, or -1 if no custom natural height has been set
+		/// </value>
+		/// <remarks>
+		/// Natural height for the widget. If set to -1, the default natural size is used.
+		/// </remarks>
+		[DefaultValue((double)-1)]
+		public double NaturalHeight {
+			get { return naturalHeight; }
+			set {
+				naturalHeight = value;
+				Backend.SetNaturalSize (naturalWidth >= 0 ? naturalWidth : -1, naturalHeight >= 0 ? naturalHeight : -1);
+				OnPreferredSizeChanged ();
+			}
+		}
+		
+		/// <summary>
+		/// Gets or sets the font of the widget.
+		/// </summary>
+		/// <value>
+		/// The font.
+		/// </value>
+		public Font Font {
+			get {
+				return new Font (Backend.Font);
+			}
+			set {
+				Backend.Font = WidgetRegistry.GetBackend (value);
+			}
+		}
+		
+		public Color BackgroundColor {
+			get { return Backend.BackgroundColor; }
+			set { Backend.BackgroundColor = value; }
 		}
 		
 		public Point ConvertToScreenCoordinates (Point widgetCoordinates)
@@ -314,30 +477,60 @@ namespace Xwt
 			base.OnBackendCreated ();
 		}
 		
+		/// <summary>
+		/// Raises the DragOverCheck event.
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
 		internal protected virtual void OnDragOverCheck (DragOverCheckEventArgs args)
 		{
 			if (dragOverCheck != null)
 				dragOverCheck (this, args);
 		}
 		
+		/// <summary>
+		/// Raises the DragOver event.
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
 		internal protected virtual void OnDragOver (DragOverEventArgs args)
 		{
 			if (dragOver != null)
 				dragOver (this, args);
 		}
 		
+		/// <summary>
+		/// Raises the DragDropCheck event.
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
 		internal protected virtual void OnDragDropCheck (DragCheckEventArgs args)
 		{
 			if (dragDropCheck != null)
 				dragDropCheck (this, args);
 		}
 		
+		/// <summary>
+		/// Raises the DragDrop event.
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
 		internal protected virtual void OnDragDrop (DragEventArgs args)
 		{
 			if (dragDrop != null)
 				dragDrop (this, args);
 		}
 		
+		/// <summary>
+		/// Raises the DragLeave event.
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
 		internal protected virtual void OnDragLeave (EventArgs args)
 		{
 			if (dragLeave != null)
@@ -365,6 +558,42 @@ namespace Xwt
 				keyReleased (this, args);
 		}
 		
+		internal protected virtual void OnGotFocus (EventArgs args)
+		{
+			if (gotFocus != null)
+				gotFocus (this, args);
+		}
+		
+		internal protected virtual void OnLostFocus (EventArgs args)
+		{
+			if (lostFocus != null)
+				lostFocus (this, args);
+		}
+		
+		/// <summary>
+		/// Called when the mouse enters the widget
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
+		protected virtual void OnMouseEntered (EventArgs args)
+		{
+			if (mouseEntered != null)
+				mouseEntered (this, args);
+		}
+		
+		/// <summary>
+		/// Called when the mouse leaves the widget
+		/// </summary>
+		/// <param name='args'>
+		/// Arguments.
+		/// </param>
+		protected virtual void OnMouseExited (EventArgs args)
+		{
+			if (mouseExited != null)
+				mouseExited (this, args);
+		}
+		
 		protected static IWidgetBackend GetWidgetBackend (Widget w)
 		{
 			return (IWidgetBackend) GetBackend (w);
@@ -378,6 +607,7 @@ namespace Xwt
 		
 		void IWidgetSurface.Reallocate ()
 		{
+			reallocationQueue.Remove (this);
 			OnReallocate ();
 		}
 		
@@ -390,8 +620,18 @@ namespace Xwt
 			if (widthCached)
 				return width;
 			else {
-				widthCached = true;
-				return width = OnGetPreferredWidth ();
+				if (!Application.EngineBackend.HandlesSizeNegotiation)
+					widthCached = true;
+				if (minWidth != -1 && naturalWidth != -1)
+					return new WidgetSize (minWidth, naturalWidth);
+				width = OnGetPreferredWidth () + Margin.HorizontalSpacing;
+				if (naturalWidth != -1)
+					width.NaturalSize = naturalWidth;
+				if (minWidth != -1)
+					width.MinSize = minWidth;
+				if (width.NaturalSize < width.MinSize)
+					width.NaturalSize = width.MinSize;
+				return width;
 			}
 		}
 		
@@ -400,8 +640,18 @@ namespace Xwt
 			if (heightCached)
 				return height;
 			else {
-				heightCached = true;
-				return height = OnGetPreferredHeight ();
+				if (!Application.EngineBackend.HandlesSizeNegotiation)
+					heightCached = true;
+				if (minHeight != -1 && naturalHeight != -1)
+					return new WidgetSize (minHeight, naturalHeight);
+				height = OnGetPreferredHeight () + Margin.VerticalSpacing;
+				if (naturalHeight != -1)
+					height.NaturalSize = naturalHeight;
+				if (minHeight != -1)
+					height.MinSize = minHeight;
+				if (height.NaturalSize < height.MinSize)
+					height.NaturalSize = height.MinSize;
+				return height;
 			}
 		}
 		
@@ -410,8 +660,21 @@ namespace Xwt
 			if (heightCached)
 				return height;
 			else {
-				heightCached = true;
-				return height = OnGetPreferredHeightForWidth (width);
+				if (!Application.EngineBackend.HandlesSizeNegotiation)
+					heightCached = true;
+				if (minHeight != -1 && naturalHeight != -1)
+					return new WidgetSize (minHeight, naturalHeight);
+				// Horizontal margin is substracted here because that's space which
+				// can't really be used to render the widget
+				width = Math.Max (width - Margin.HorizontalSpacing, 0);
+				height = OnGetPreferredHeightForWidth (width) + Margin.VerticalSpacing;
+				if (naturalHeight != -1)
+					height.NaturalSize = naturalHeight;
+				if (minHeight != -1)
+					height.MinSize = minHeight;
+				if (height.NaturalSize < height.MinSize)
+					height.NaturalSize = height.MinSize;
+				return height;
 			}
 		}
 		
@@ -420,8 +683,21 @@ namespace Xwt
 			if (widthCached)
 				return width;
 			else {
-				widthCached = true;
-				return width = OnGetPreferredWidthForHeight (height);
+				if (!Application.EngineBackend.HandlesSizeNegotiation)
+					widthCached = true;
+				if (minWidth != -1 && naturalWidth != -1)
+					return new WidgetSize (minWidth, naturalWidth);
+				// Vertical margin is substracted here because that's space which
+				// can't really be used to render the widget
+				height = Math.Max (height - Margin.VerticalSpacing, 0);
+				width = OnGetPreferredWidthForHeight (height) + Margin.HorizontalSpacing;
+				if (naturalWidth != -1)
+					width.NaturalSize = naturalWidth;
+				if (minWidth != -1)
+					width.MinSize = minWidth;
+				if (width.NaturalSize < width.MinSize)
+					width.NaturalSize = width.MinSize;
+				return width;
 			}
 		}
 		
@@ -442,82 +718,185 @@ namespace Xwt
 			return SizeRequestMode.HeightForWidth;
 		}
 		
+		
+		/// <summary>
+		/// Gets the preferred width of the widget (it must not include the widget margin)
+		/// </summary>
 		protected virtual WidgetSize OnGetPreferredWidth ()
 		{
 			return Backend.GetPreferredWidth ();
 		}
 		
+		/// <summary>
+		/// Gets the preferred height of the widget (it must not include the widget margin)
+		/// </summary>
 		protected virtual WidgetSize OnGetPreferredHeight ()
 		{
 			return Backend.GetPreferredHeight ();
 		}
 		
+		/// <summary>
+		/// Gets the preferred height of the widget for a given width (it must not include the widget margin)
+		/// </summary>
 		protected virtual WidgetSize OnGetPreferredHeightForWidth (double width)
 		{
 			return Backend.GetPreferredHeightForWidth (width);
 		}
 		
+		/// <summary>
+		/// Gets the preferred width of the widget for a given height (it must not include the widget margin)
+		/// </summary>
 		protected virtual WidgetSize OnGetPreferredWidthForHeight (double height)
 		{
 			return Backend.GetPreferredWidthForHeight (height);
 		}
 		
-		protected virtual void OnChildPreferredSizeChanged (Widget w)
+		void OnChildPreferredSizeChanged ()
 		{
-			if (Parent != null && (!widthCached || !heightCached)) {
-				Parent.OnChildPreferredSizeChanged (w);
+			IWidgetSurface surface = this;
+			
+			if (Parent != null && resizeRequestQueue.Contains (Parent)) {
+				// Size for this widget will be checked when checking the parent
+				surface.ResetCachedSizes ();
 				return;
 			}
+			
+			// Determine if the size change of the child implies a size change
+			// of this widget. If it does, the size change notification
+			// has to be propagated to the parent
 			
 			var oldWidth = width;
 			var oldHeight = height;
 			
-			bool notifyParent = Parent != null;
-			IWidgetSurface surface = this;
 			surface.ResetCachedSizes ();
+			
+			bool changed = true;
 			
 			if (surface.SizeRequestMode == SizeRequestMode.HeightForWidth) {
 				var nw = surface.GetPreferredWidth ();
 				if (nw == oldWidth) {
 					var nh = surface.GetPreferredHeightForWidth (Backend.Size.Width);
 					if (nh == oldHeight)
-						notifyParent = false;
+						changed = false;
 				}
 			} else {
 				var nh = surface.GetPreferredHeight ();
 				if (nh == oldHeight) {
 					var nw = surface.GetPreferredWidthForHeight (Backend.Size.Height);
 					if (nw == oldWidth)
-						notifyParent = false;
+						changed = false;
 				}
 			}
-			if (notifyParent) {
-				if (Parent != null)
-					Parent.OnChildPreferredSizeChanged (this);
-			}
+			if (changed)
+				NotifySizeChangeToParent ();
 			else
-				surface.Reallocate ();
+				QueueForReallocate (this);
 		}
+		
+		static HashSet<Widget> resizeRequestQueue = new HashSet<Widget> ();
+		static HashSet<Widget> reallocationQueue = new HashSet<Widget> ();
+		static List<int> resizeDepths = new List<int> ();
+		static List<Widget> resizeWidgets = new List<Widget> ();
+		static List<Window> resizeWindows = new List<Window> ();
+		static bool delayedSizeNegotiationRequested;
 		
 		protected virtual void OnPreferredSizeChanged ()
 		{
+			// When the preferred size changes, we reset the sizes we have cached
+			// The parent also has to be notified of the size change, since it
+			// may imply a change of the size of the parent. However, we don't do
+			// it immediately, but we queue the resizing request
+			
 			IWidgetSurface surface = this;
 			surface.ResetCachedSizes ();
 			Backend.UpdateLayout ();
+			if (!Application.EngineBackend.HandlesSizeNegotiation)
+				NotifySizeChangeToParent ();
+		}
+		
+		void NotifySizeChangeToParent ()
+		{
 			if (Parent != null) {
-				if (resizeRequestQueue.Count == 0)
-					Application.Invoke (DelayedResizeRequest);
-				resizeRequestQueue.Add (this);
+				QueueForSizeCheck (Parent);
+				if (!delayedSizeNegotiationRequested) {
+					delayedSizeNegotiationRequested = true;
+					Toolkit.QueueExitAction (DelayedResizeRequest);
+				}
+			} else if (ParentWindow is Window) {
+				resizeWindows.Add ((Window)ParentWindow);
+				if (!delayedSizeNegotiationRequested) {
+					delayedSizeNegotiationRequested = true;
+					Toolkit.QueueExitAction (DelayedResizeRequest);
+				}
+			}
+		}
+		
+		void QueueForReallocate (Widget w)
+		{
+			reallocationQueue.Add (w);
+		}
+		
+		void QueueForSizeCheck (Widget w)
+		{
+			if (resizeRequestQueue.Add (Parent)) {
+				int depth = w.Depth;
+				bool inserted = false;
+				for (int n=0; n<resizeDepths.Count; n++) {
+					if (resizeDepths[n] < depth) {
+						resizeDepths.Insert (n, depth);
+						resizeWidgets.Insert (n, w);
+						inserted = true;
+						break;
+					}
+				}
+				if (!inserted) {
+					resizeDepths.Add (depth);
+					resizeWidgets.Add (w);
+				}
 			}
 		}
 		
 		void DelayedResizeRequest ()
 		{
-			var copy = resizeRequestQueue.ToArray ();
-			resizeRequestQueue.Clear ();
-			foreach (var w in copy) {
-				if (w.Parent != null)
-					w.Parent.OnChildPreferredSizeChanged (w);
+			// First of all, query the preferred size for those
+			// widgets that were changed
+
+			try {
+				int n = 0;
+				while (n < resizeWidgets.Count) {
+					var w = resizeWidgets[n];
+					w.OnChildPreferredSizeChanged ();
+					n++;
+				}
+				
+				// Now reallocate the widgets whose size has actually changed
+				
+				var toReallocate = reallocationQueue.OrderBy (w => w.Depth).ToArray ();
+				foreach (var w in toReallocate) {
+					// The widget may already have been reallocated as a result of reallocating the parent
+					// so we have to check if it is still in the queue
+					if (reallocationQueue.Contains (w))
+						((IWidgetSurface)w).Reallocate ();
+				}
+				foreach (var w in resizeWindows.ToArray ()) {
+					w.AdjustSize ();
+					w.Reallocate ();
+				}
+			} finally {
+				resizeRequestQueue.Clear ();
+				resizeDepths.Clear ();
+				resizeWidgets.Clear ();
+				reallocationQueue.Clear ();
+				resizeWindows.Clear ();
+				delayedSizeNegotiationRequested = false;
+			}
+		}
+		
+		int Depth {
+			get {
+				if (Parent != null)
+					return Parent.Depth + 1;
+				return 0;
 			}
 		}
 		
@@ -546,6 +925,19 @@ namespace Xwt
 				throw new InvalidOperationException ("Widget is not a child of this widget");
 		}
 		
+		/// <summary>
+		/// Raised when the mouse is moved over the widget in a drag&drop operation
+		/// </summary>
+		/// <remarks>
+		/// The subscriber of the event should set the value of AllowedAction in the
+		/// provided event args object. If the value is not set or it is set to Default,
+		/// the action will be determined by the result of the DragOver event.
+		/// 
+		/// This event provides information about the type of the data that is going
+		/// to be dropped, but not the actual data. If you need the actual data
+		/// to decide if the drop is allowed or not, you have to subscribe the DragOver
+		/// event.
+		/// </remarks>
 		public event EventHandler<DragOverCheckEventArgs> DragOverCheck {
 			add {
 				OnBeforeEventAdd (WidgetEvent.DragOverCheck, dragOverCheck);
@@ -557,6 +949,19 @@ namespace Xwt
 			}
 		}
 		
+		/// <summary>
+		/// Raised when the mouse is moved over the widget in a drag&drop operation
+		/// </summary>
+		/// <remarks>
+		/// The subscriber of the event should set the value of AllowedAction in the
+		/// provided event args object. If the value is not set or it is set to Default,
+		/// the action will be determined by the result of the DragDropCheck event.
+		/// 
+		/// This event provides information about the actual data that is going
+		/// to be dropped. Getting the data may be inneficient in some cross-process drag&drop scenarios,
+		/// so if you don't need the actual data to decide the allowed drop operation, 
+		/// and knowing the type of the data is enough, then the DragOverCheck event is a better option.
+		/// </remarks>
 		public event EventHandler<DragOverEventArgs> DragOver {
 			add {
 				OnBeforeEventAdd (WidgetEvent.DragOver, dragOver);
@@ -568,6 +973,9 @@ namespace Xwt
 			}
 		}
 		
+		/// <summary>
+		/// Raised to check if a drop operation is allowed on the widget
+		/// </summary>
 		public event EventHandler<DragCheckEventArgs> DragDropCheck {
 			add {
 				OnBeforeEventAdd (WidgetEvent.DragDropCheck, dragDropCheck);
@@ -579,6 +987,13 @@ namespace Xwt
 			}
 		}
 		
+		/// <summary>
+		/// Raised when dropping on the widget
+		/// </summary>
+		/// <remarks>
+		/// The subscriber of the event should set the value of Success in the
+		/// provided event args object.
+		/// </remarks>
 		public event EventHandler<DragEventArgs> DragDrop {
 			add {
 				OnBeforeEventAdd (WidgetEvent.DragDrop, dragDrop);
@@ -622,6 +1037,62 @@ namespace Xwt
 				OnAfterEventRemove (WidgetEvent.KeyReleased, keyReleased);
 			}
 		}
+		
+		/// <summary>
+		/// Raised when the widget gets the focus
+		/// </summary>
+		public event EventHandler GotFocus {
+			add {
+				OnBeforeEventAdd (WidgetEvent.GotFocus, gotFocus);
+				gotFocus += value;
+			}
+			remove {
+				gotFocus -= value;
+				OnAfterEventRemove (WidgetEvent.GotFocus, gotFocus);
+			}
+		}
+		
+		/// <summary>
+		/// Raised when the widget loses the focus
+		/// </summary>
+		public event EventHandler LostFocus {
+			add {
+				OnBeforeEventAdd (WidgetEvent.LostFocus, lostFocus);
+				lostFocus += value;
+			}
+			remove {
+				lostFocus -= value;
+				OnAfterEventRemove (WidgetEvent.LostFocus, lostFocus);
+			}
+		}
+
+		/// <summary>
+		/// Occurs when the mouse enters the widget
+		/// </summary>
+		public event EventHandler MouseEntered {
+			add {
+				OnBeforeEventAdd (WidgetEvent.MouseEntered, mouseEntered);
+				mouseEntered += value;
+			}
+			remove {
+				mouseEntered -= value;
+				OnAfterEventRemove (WidgetEvent.MouseEntered, mouseEntered);
+			}
+		}
+
+		/// <summary>
+		/// Occurs when the mouse exits the widget
+		/// </summary>
+		public event EventHandler MouseExited {
+			add {
+				OnBeforeEventAdd (WidgetEvent.MouseExited, mouseExited);
+				mouseExited += value;
+			}
+			remove {
+				mouseExited -= value;
+				OnAfterEventRemove (WidgetEvent.MouseExited, mouseExited);
+			}
+		}
 	}
 	
 	class EventMap
@@ -639,26 +1110,24 @@ namespace Xwt
 	public class WidgetSpacing
 	{
 		ISpacingListener parent;
-		int top, left, right, bottom;
-		string spacingType;
+		double top, left, right, bottom;
 		
-		internal WidgetSpacing (ISpacingListener parent, string spacingType)
+		internal WidgetSpacing (ISpacingListener parent)
 		{
-			this.spacingType = spacingType;
 			this.parent = parent;
 		}
 		
 		void NotifyChanged ()
 		{
-			parent.OnSpacingChanged (spacingType);
+			parent.OnSpacingChanged (this);
 		}
 		
-		public int Left {
+		public double Left {
 			get { return left; }
 			set { left = value; NotifyChanged (); }
 		}
 		
-		public int Bottom {
+		public double Bottom {
 			get {
 				return this.bottom;
 			}
@@ -667,7 +1136,7 @@ namespace Xwt
 			}
 		}
 	
-		public int Right {
+		public double Right {
 			get {
 				return this.right;
 			}
@@ -676,7 +1145,7 @@ namespace Xwt
 			}
 		}
 	
-		public int Top {
+		public double Top {
 			get {
 				return this.top;
 			}
@@ -685,15 +1154,15 @@ namespace Xwt
 			}
 		}
 		
-		public int HorizontalSpacing {
+		public double HorizontalSpacing {
 			get { return left + right; }
 		}
 		
-		public int VerticalSpacing {
+		public double VerticalSpacing {
 			get { return top + bottom; }
 		}
 		
-		public void Set (int left, int top, int right, int bottom)
+		public void Set (double left, double top, double right, double bottom)
 		{
 			this.left = left;
 			this.top = top;
@@ -702,7 +1171,7 @@ namespace Xwt
 			NotifyChanged ();
 		}
 		
-		public void SetAll (int padding)
+		public void SetAll (double padding)
 		{
 			this.left = padding;
 			this.top = padding;
@@ -714,7 +1183,7 @@ namespace Xwt
 	
 	public interface ISpacingListener
 	{
-		void OnSpacingChanged (string spacingType);
+		void OnSpacingChanged (WidgetSpacing source);
 	}
 }
 

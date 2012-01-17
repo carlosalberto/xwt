@@ -35,6 +35,10 @@ namespace Xwt
 	{
 		static EngineBackend engine;
 		
+		internal static EngineBackend EngineBackend {
+			get { return engine; }
+		}
+		
 		public static void Initialize ()
 		{
 			if (engine != null)
@@ -51,16 +55,52 @@ namespace Xwt
 		
 		public static void Run ()
 		{
-			engine.RunApplication ();
-		}
-		
-		public static void Invoke (Action action)
-		{
-			engine.Invoke (action);
+			Toolkit.InvokePlatformCode (delegate {
+				engine.RunApplication ();
+			});
 		}
 		
 		/// <summary>
-		/// Invokes a method after the provided time span
+		/// Invokes an action in the GUI thread
+		/// </summary>
+		/// <param name='action'>
+		/// The action to execute.
+		/// </param>
+		public static void Invoke (Action action)
+		{
+			engine.Invoke (delegate {
+				try {
+					Toolkit.EnterUserCode ();
+					action ();
+					Toolkit.ExitUserCode (null);
+				} catch (Exception ex) {
+					Toolkit.ExitUserCode (ex);
+				}
+			});
+		}
+		
+		/// <summary>
+		/// Invokes an action in the GUI thread after the provided time span
+		/// </summary>
+		/// <returns>
+		/// A timer object
+		/// </returns>
+		/// <param name='action'>
+		/// The action to execute.
+		/// </param>
+		/// <remarks>
+		/// This method schedules the execution of the provided function. The function
+		/// must return 'true' if it has to be executed again after the time span, or 'false'
+		/// if the timer can be discarded.
+		/// The execution of the funciton can be canceled by disposing the returned object.
+		/// </remarks>
+		public static IDisposable TimeoutInvoke (int ms, Func<bool> action)
+		{
+			return TimeoutInvoke (TimeSpan.FromMilliseconds (ms), action);
+		}
+		
+		/// <summary>
+		/// Invokes an action in the GUI thread after the provided time span
 		/// </summary>
 		/// <returns>
 		/// A timer object
@@ -77,7 +117,17 @@ namespace Xwt
 		public static IDisposable TimeoutInvoke (TimeSpan timeSpan, Func<bool> action)
 		{
 			Timer t = new Timer ();
-			t.Id = engine.TimeoutInvoke (action, timeSpan);
+			t.Id = engine.TimeoutInvoke (delegate {
+				bool res = false;
+				try {
+					Toolkit.EnterUserCode ();
+					res = action ();
+					Toolkit.ExitUserCode (null);
+				} catch (Exception ex) {
+					Toolkit.ExitUserCode (ex);
+				}
+				return res;
+			}, timeSpan);
 			return t;
 		}
 		
@@ -112,6 +162,7 @@ namespace Xwt
 		
 		static void InitBackend (string type)
 		{
+			Toolkit.EnterUserCode ();
 			if (type != null && LoadBackend (type))
 				return;
 			
@@ -125,6 +176,11 @@ namespace Xwt
 				return;
 			
 			throw new InvalidOperationException ("Xwt engine not found");
+		}
+		
+		internal static void NotifyException (Exception ex)
+		{
+			Console.WriteLine (ex);
 		}
 	}
 }

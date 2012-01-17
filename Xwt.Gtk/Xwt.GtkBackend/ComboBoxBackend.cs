@@ -25,6 +25,7 @@
 // THE SOFTWARE.
 using System;
 using Xwt.Backends;
+using Xwt.Engine;
 
 namespace Xwt.GtkBackend
 {
@@ -36,11 +37,17 @@ namespace Xwt.GtkBackend
 
 		public override void Initialize ()
 		{
-			Widget = new Gtk.ComboBox ();
+			Widget = (Gtk.ComboBox) CreateWidget ();
 			var cr = new Gtk.CellRendererText ();
 			Widget.PackStart (cr, false);
 			Widget.AddAttribute (cr, "text", 0);
 			Widget.Show ();
+			Widget.RowSeparatorFunc = IsRowSeparator;
+		}
+		
+		protected virtual Gtk.Widget CreateWidget ()
+		{
+			return new Gtk.ComboBox ();
 		}
 		
 		protected new Gtk.ComboBox Widget {
@@ -50,6 +57,16 @@ namespace Xwt.GtkBackend
 		
 		protected new IComboBoxEventSink EventSink {
 			get { return (IComboBoxEventSink)base.EventSink; }
+		}
+		
+		bool IsRowSeparator (Gtk.TreeModel model, Gtk.TreeIter iter)
+		{
+			Gtk.TreePath path = model.GetPath (iter);
+			bool res = false;
+			Toolkit.Invoke (delegate {
+				res = EventSink.RowIsSeparator (path.Indices[0]);
+			});
+			return res;
 		}
 		
 		public override void EnableEvent (object eventId)
@@ -72,7 +89,9 @@ namespace Xwt.GtkBackend
 
 		void HandleChanged (object sender, EventArgs e)
 		{
-			EventSink.OnSelectionChanged ();
+			Toolkit.Invoke (delegate {
+				EventSink.OnSelectionChanged ();
+			});
 		}
 
 		#region IComboBoxBackend implementation

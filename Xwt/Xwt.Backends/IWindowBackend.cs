@@ -33,6 +33,11 @@ namespace Xwt.Backends
 	{
 		void SetChild (IWidgetBackend child);
 		void SetMainMenu (IMenuBackend menu);
+		void SetPadding (double left, double top, double right, double bottom);
+	}
+	
+	public interface IWindowEventSink: IWindowFrameEventSink
+	{
 	}
 }
 

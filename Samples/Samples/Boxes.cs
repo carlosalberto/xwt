@@ -50,12 +50,20 @@ namespace Samples
 				hsb.Visible = !hsb.Visible;
 			};
 			PackStart (box5);
+			
+			HBox box6 = new HBox ();
+			for (int n=0; n<15; n++) {
+				var w = new Label ("TestLabel" + n);
+				w.MinWidth = 10;
+				box6.PackStart (w);
+			}
+			PackStart (box6);
 		}
 	}
 	
 	class SimpleBox: Canvas
 	{
-		double coreSize;
+		Size coreSize;
 		double margin = 1;
 		
 		public Color Color { get; set; }
@@ -63,8 +71,15 @@ namespace Samples
 		public SimpleBox (double coreSize)
 		{
 			Color = new Color (0.5, 0.5, 1);
-			this.coreSize = coreSize;
+			this.coreSize = new Size (coreSize, coreSize);
 			MinSize = new Size (coreSize + margin * 2, coreSize + margin * 2);
+		}
+		
+		public SimpleBox (double coreWidth, double coreHeight)
+		{
+			Color = new Color (0.5, 0.5, 1);
+			this.coreSize = new Size (coreWidth, coreHeight);
+			MinSize = new Size (coreSize.Width + margin * 2, coreSize.Height + margin * 2);
 		}
 		
 		protected override void OnDraw (Context ctx)
@@ -76,7 +91,7 @@ namespace Samples
 			ctx.Rectangle (Bounds.Inflate (-margin, -margin)); 
 			ctx.Fill ();
 			ctx.SetColor (Color);
-			ctx.Rectangle (Bounds.Width / 2 - coreSize / 2, Bounds.Height / 2 - coreSize / 2, coreSize, coreSize);
+			ctx.Rectangle (Bounds.Width / 2 - coreSize.Width / 2, Bounds.Height / 2 - coreSize.Height / 2, coreSize.Width, coreSize.Height);
 			ctx.Fill ();
 		}
 	}

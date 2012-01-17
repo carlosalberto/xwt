@@ -119,7 +119,7 @@ namespace Xwt.Mac
 		{
 		}
 		
-		public virtual void Dispose ()
+		public virtual void Dispose (bool disposing)
 		{
 		}
 		
@@ -144,7 +144,28 @@ namespace Xwt.Mac
 		{
 			return GetWidget ((IWidgetBackend)WidgetRegistry.GetBackend (w));
 		}
-
+		
+		public virtual object Font {
+			get {
+				/// TODO
+//				throw new NotImplementedException ();
+				return null;
+			}
+			set {
+				/// TODO
+//				throw new NotImplementedException ();
+			}
+		}
+		
+		public Xwt.Drawing.Color BackgroundColor {
+			get {
+				throw new NotImplementedException ();
+			}
+			set {
+				throw new NotImplementedException ();
+			}
+		}
+		
 		#region IWidgetBackend implementation
 		
 		public Point ConvertToScreenCoordinates (Point widgetCoordinates)
@@ -156,26 +177,43 @@ namespace Xwt.Mac
 		
 		public WidgetSize GetPreferredWidth ()
 		{
-			double w = Widget.WidgetWidth () + frontend.Margin.HorizontalSpacing;
-			return new Xwt.WidgetSize (w, w);
-		}
-
-		public WidgetSize GetPreferredHeightForWidth (double width)
-		{
-			double w = Widget.WidgetHeight () + frontend.Margin.VerticalSpacing;
-			return new Xwt.WidgetSize (w, w);
+			double w = Widget.WidgetWidth() + frontend.Margin.HorizontalSpacing;
+			var s = new Xwt.WidgetSize (w, w);
+			if (minWidth != -1 && s.MinSize > minWidth)
+				s.MinSize = minWidth;
+			return s;
 		}
 
 		public WidgetSize GetPreferredHeight ()
 		{
-			double w = Widget.WidgetHeight () + frontend.Margin.VerticalSpacing;
-			return new Xwt.WidgetSize (w, w);
+			double h = Widget.WidgetHeight() + frontend.Margin.VerticalSpacing;
+			var s = new Xwt.WidgetSize (h, h);
+			if (minHeight != -1 && s.MinSize > minHeight)
+				s.MinSize = minHeight;
+			return s;
+		}
+
+		public WidgetSize GetPreferredHeightForWidth (double width)
+		{
+			return GetPreferredHeight ();
 		}
 
 		public WidgetSize GetPreferredWidthForHeight (double height)
 		{
-			double w = Widget.WidgetWidth () + frontend.Margin.HorizontalSpacing;
-			return new Xwt.WidgetSize (w, w);
+			return GetPreferredWidth ();
+		}
+		
+		double minWidth = -1, minHeight = -1;
+		
+		public void SetMinSize (double width, double height)
+		{
+			minWidth = width;
+			minHeight = height;
+		}
+		
+		public void SetNaturalSize (double width, double height)
+		{
+			// Nothing to do
 		}
 		
 		public virtual void UpdateLayout ()
@@ -287,7 +325,9 @@ namespace Xwt.Mac
 			
 			if ((backend.currentEvents & WidgetEvent.DragOverCheck) != 0) {
 				var args = new DragOverCheckEventArgs (pos, types, ConvertAction (di.DraggingSourceOperationMask));
-				backend.eventSink.OnDragOverCheck (args);
+				Toolkit.Invoke (delegate {
+					backend.eventSink.OnDragOverCheck (args);
+				});
 				if (args.AllowedAction == DragDropAction.None)
 					return NSDragOperation.None;
 				if (args.AllowedAction != DragDropAction.Default)
@@ -298,7 +338,9 @@ namespace Xwt.Mac
 				TransferDataStore store = new TransferDataStore ();
 				FillDataStore (store, di.DraggingPasteboard, ob.View.RegisteredDragTypes ());
 				var args = new DragOverEventArgs (pos, store, ConvertAction (di.DraggingSourceOperationMask));
-				backend.eventSink.OnDragOver (args);
+				Toolkit.Invoke (delegate {
+					backend.eventSink.OnDragOver (args);
+				});
 				if (args.AllowedAction == DragDropAction.None)
 					return NSDragOperation.None;
 				if (args.AllowedAction != DragDropAction.Default)
@@ -313,7 +355,9 @@ namespace Xwt.Mac
 			IViewObject<T> ob = Runtime.GetNSObject (sender) as IViewObject<T>;
 			if (ob != null) {
 				var backend = (ViewBackend<T,S>) WidgetRegistry.GetBackend (ob.Frontend);
-				backend.eventSink.OnDragLeave (EventArgs.Empty);
+				Toolkit.Invoke (delegate {
+					backend.eventSink.OnDragLeave (EventArgs.Empty);
+				});
 			}
 		}
 		
@@ -331,8 +375,10 @@ namespace Xwt.Mac
 			
 			if ((backend.currentEvents & WidgetEvent.DragDropCheck) != 0) {
 				var args = new DragCheckEventArgs (pos, types, ConvertAction (di.DraggingSourceOperationMask));
-				backend.eventSink.OnDragDropCheck (args);
-				if (args.Result == DragDropResult.Canceled)
+				bool res = Toolkit.Invoke (delegate {
+					backend.eventSink.OnDragDropCheck (args);
+				});
+				if (args.Result == DragDropResult.Canceled || !res)
 					return false;
 			}
 			return true;
@@ -353,7 +399,9 @@ namespace Xwt.Mac
 				TransferDataStore store = new TransferDataStore ();
 				FillDataStore (store, di.DraggingPasteboard, ob.View.RegisteredDragTypes ());
 				var args = new DragEventArgs (pos, store, ConvertAction (di.DraggingSourceOperationMask));
-				backend.eventSink.OnDragDrop (args);
+				Toolkit.Invoke (delegate {
+					backend.eventSink.OnDragDrop (args);
+				});
 				return args.Success;
 			} else
 				return false;

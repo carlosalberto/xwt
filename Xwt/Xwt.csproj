@@ -157,6 +157,24 @@
     <Compile Include="Xwt\KeyEventArgs.cs" />
     <Compile Include="Xwt\WindowFrame.cs" />
     <Compile Include="Xwt.Backends\IWindowFrameBackend.cs" />
+    <Compile Include="Xwt\CheckBox.cs" />
+    <Compile Include="Xwt.Backends\ICheckBoxBackend.cs" />
+    <Compile Include="Xwt\ContentPosition.cs" />
+    <Compile Include="Xwt\Frame.cs" />
+    <Compile Include="Xwt.Backends\IFrameBackend.cs" />
+    <Compile Include="Xwt\Separator.cs" />
+    <Compile Include="Xwt.Backends\ISeparatorBackend.cs" />
+    <Compile Include="Xwt\HSeparator.cs" />
+    <Compile Include="Xwt\VSeparator.cs" />
+    <Compile Include="Xwt\ItemSeparator.cs" />
+    <Compile Include="Xwt.Backends\ICollectionListener.cs" />
+    <Compile Include="Xwt.Backends\IDialogBackend.cs" />
+    <Compile Include="Xwt\DialogButtonCollection.cs" />
+    <Compile Include="Xwt\ComboBoxEntry.cs" />
+    <Compile Include="Xwt.Backends\IComboBoxEntryBackend.cs" />
+    <Compile Include="Xwt.Engine\Toolkit.cs" />
+    <Compile Include="Xwt\TreeViewStatus.cs" />
+    <Compile Include="Xwt\Clipboard.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

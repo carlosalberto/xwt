@@ -37,6 +37,7 @@ namespace Xwt.Backends
 	public interface IComboBoxEventSink: IWidgetEventSink
 	{
 		void OnSelectionChanged ();
+		bool RowIsSeparator (int rowIndex);
 	}
 	
 	public enum ComboBoxEvent

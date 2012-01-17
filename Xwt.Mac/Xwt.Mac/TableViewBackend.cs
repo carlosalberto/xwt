@@ -29,6 +29,7 @@ using MonoMac.AppKit;
 using Xwt.Backends;
 using System.Collections.Generic;
 using MonoMac.Foundation;
+using Xwt.Engine;
 
 namespace Xwt.Mac
 {
@@ -84,7 +85,9 @@ namespace Xwt.Mac
 
 		void HandleTreeSelectionDidChange (NSNotification notif)
 		{
-			EventSink.OnSelectionChanged ();
+			Toolkit.Invoke (delegate {
+				EventSink.OnSelectionChanged ();
+			});
 		}
 		
 		public void SetSelectionMode (SelectionMode mode)
@@ -131,6 +134,20 @@ namespace Xwt.Mac
 		float ICellSource.RowHeight {
 			get { return Table.RowHeight; }
 			set { Table.RowHeight = value; }
+		}
+		
+		public bool HeadersVisible {
+			get {
+				return Table.HeaderView != null;
+			}
+			set {
+				if (value) {
+					if (Table.HeaderView == null)
+						Table.HeaderView = new NSTableHeaderView ();
+				} else {
+					Table.HeaderView = null;
+				}
+			}
 		}
 	}
 	

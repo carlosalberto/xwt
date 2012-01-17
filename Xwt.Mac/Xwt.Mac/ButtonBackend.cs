@@ -28,6 +28,7 @@ using System;
 using Xwt.Backends;
 using MonoMac.AppKit;
 using MonoMac.Foundation;
+using Xwt.Engine;
 
 namespace Xwt.Mac
 {
@@ -54,11 +55,18 @@ namespace Xwt.Mac
 			((Button)Widget).DisableEvent (ev);
 		}
 		
-		public void SetContent (string label, object imageBackend)
+		public void SetContent (string label, object imageBackend, ContentPosition imagePosition)
 		{
 			Widget.Title = label;
-			if (imageBackend != null)
+			if (imageBackend != null) {
 				Widget.Image = (NSImage)imageBackend;
+				switch (imagePosition) {
+				case ContentPosition.Bottom: Widget.ImagePosition = NSCellImagePosition.ImageBelow; break;
+				case ContentPosition.Left: Widget.ImagePosition = NSCellImagePosition.ImageLeft; break;
+				case ContentPosition.Right: Widget.ImagePosition = NSCellImagePosition.ImageRight; break;
+				case ContentPosition.Top: Widget.ImagePosition = NSCellImagePosition.ImageAbove; break;
+				}
+			}
 			Widget.SizeToFit ();
 		}
 		
@@ -76,6 +84,11 @@ namespace Xwt.Mac
 			}
 		}
 		
+		public void SetButtonType (ButtonType type)
+		{
+			
+		}
+		
 		#endregion
 	}
 	
@@ -89,7 +102,9 @@ namespace Xwt.Mac
 		{
 			BezelStyle = NSBezelStyle.Rounded;
 			Activated += delegate {
-				eventSink.OnClicked ();
+				Toolkit.Invoke (delegate {
+					eventSink.OnClicked ();
+				});
 			};
 		}
 		
