@@ -37,21 +37,28 @@ namespace Xwt.WPFBackend
 {
 	public class WindowBackend : WindowFrameBackend, IWindowBackend
 	{
-		DockPanel rootPanel;
+		Grid rootPanel;
 		internal System.Windows.Controls.Menu mainMenu;
 		MenuBackend mainMenuBackend;
 
 		public WindowBackend ()
 		{
 			Window = new System.Windows.Window ();
-			rootPanel = new DockPanel ();
+			rootPanel = new Grid ();
 
 			Window.Content = rootPanel;
+
+            var menuRow = new RowDefinition();
+            menuRow.Height = GridLength.Auto;
+            rootPanel.RowDefinitions.Add(menuRow);
+            rootPanel.RowDefinitions.Add(new RowDefinition());
 		}
 
 		public void SetChild (IWidgetBackend child)
 		{
-			Window.Content = ((IWpfWidgetBackend)child).Widget;
+            FrameworkElement widget = ((IWpfWidgetBackend)child).Widget;
+			rootPanel.Children.Add(widget);
+            Grid.SetRow(widget, 1);
 		}
 
 		public void SetMainMenu (IMenuBackend menu)
@@ -74,6 +81,8 @@ namespace Xwt.WPFBackend
 				m.Items.Add (item.MenuItem);
 
 			rootPanel.Children.Add (m);
+
+            Grid.SetRow(m, 0);
 
 			mainMenu = m;
 			mainMenuBackend = menuBackend;
