@@ -38,7 +38,7 @@ namespace Xwt.WPFBackend
 	public class WindowBackend : WindowFrameBackend, IWindowBackend
 	{
 		DockPanel rootPanel;
-		System.Windows.Controls.Menu mainMenu;
+		internal System.Windows.Controls.Menu mainMenu;
 		MenuBackend mainMenuBackend;
 
 		public WindowBackend ()
@@ -56,12 +56,14 @@ namespace Xwt.WPFBackend
 
 		public void SetMainMenu (IMenuBackend menu)
 		{
+            if (mainMenu != null) {
+                mainMenuBackend.ParentWindow = null;
+                rootPanel.Children.Remove(mainMenu);
+            }
+
 			if (menu == null) {
-				if (mainMenu != null) {
-					rootPanel.Children.Remove (mainMenu);
-					mainMenu = null;
-					mainMenuBackend = null;
-				}
+                mainMenu = null;
+                mainMenuBackend = null;
 				return;
 			}
 
@@ -75,6 +77,7 @@ namespace Xwt.WPFBackend
 
 			mainMenu = m;
 			mainMenuBackend = menuBackend;
+            mainMenuBackend.ParentWindow = this;
 		}
 
 		public void SetPadding (double left, double top, double right, double bottom)
